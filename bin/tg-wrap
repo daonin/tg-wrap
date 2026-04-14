@@ -1,0 +1,50 @@
+#!/bin/bash
+source ~/.config/notify/telegram.conf
+
+CMD="$*"
+START_TIME=$(date +%s)
+PROGRESS_FILE="/tmp/tg-progress"
+INTERVAL=600
+
+tg_send() {
+    curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+      -d chat_id="${CHAT_ID}" \
+      -d text="$1" > /dev/null
+}
+
+(
+  while true; do
+    sleep $INTERVAL
+    ELAPSED=$(( $(date +%s) - START_TIME ))
+    ELAPSED_MIN=$(( ELAPSED / 60 ))
+    if [ -f "$PROGRESS_FILE" ]; then
+      PROGRESS=$(cat "$PROGRESS_FILE")
+      tg_send "⏳ $CMD
+$PROGRESS
+Прошло: ${ELAPSED_MIN} мин"
+    else
+      tg_send "⏳ $CMD
+Прошло: ${ELAPSED_MIN} мин"
+    fi
+  done
+) &
+HEARTBEAT_PID=$!
+
+"$@"
+EXIT_CODE=$?
+
+kill $HEARTBEAT_PID 2>/dev/null
+rm -f "$PROGRESS_FILE"
+
+ELAPSED=$(( $(date +%s) - START_TIME ))
+ELAPSED_MIN=$(( ELAPSED / 60 ))
+
+if [ $EXIT_CODE -eq 0 ]; then
+    tg_send "✅ Готово: $CMD
+Время: ${ELAPSED_MIN} мин"
+else
+    tg_send "❌ Ошибка (код $EXIT_CODE): $CMD
+Время: ${ELAPSED_MIN} мин"
+fi
+
+exit $EXIT_CODE
