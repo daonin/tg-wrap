@@ -30,6 +30,8 @@ $PROGRESS
 ) &
 HEARTBEAT_PID=$!
 
+tg_send "🚀 Старт: $CMD"
+
 "$@"
 EXIT_CODE=$?
 
